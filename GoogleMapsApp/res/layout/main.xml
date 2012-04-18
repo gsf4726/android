@@ -16,10 +16,16 @@
 	     android:text="Longitude:"
 	  />
 	  <TextView
-	   android:id="@+id/latitude"
-	   android:layout_width="fill_parent"
-	     android:layout_height="fill_parent"
-	     android:text="Latitude:"
+	   	android:id="@+id/latitude"
+	   	android:layout_width="fill_parent"
+	    android:layout_height="fill_parent"
+	    android:text="Latitude:"
+	  />
+	  <TextView
+	   	android:id="@+id/distanceTravelled"
+	   	android:layout_width="fill_parent"
+	    android:layout_height="fill_parent"
+	    android:text="Meters Travelled:"
 	  />
  	</LinearLayout>
     <com.google.android.maps.MapView

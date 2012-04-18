@@ -1,7 +1,5 @@
 package greg.play.maps;
 
-import java.util.ArrayList;
-
 import android.graphics.Canvas;
 import android.graphics.Color;
 import android.graphics.Paint;
@@ -10,12 +8,10 @@ import android.graphics.Point;
 import com.google.android.maps.GeoPoint;
 import com.google.android.maps.MapView;
 import com.google.android.maps.Overlay;
-import com.google.android.maps.OverlayItem;
 import com.google.android.maps.Projection;
 
 public class RouteOverlay extends Overlay {
 
-	private ArrayList<OverlayItem> mOverlays = new ArrayList<OverlayItem>();
 	GeoPoint prePoint=null, currentPoint=null;
 	Paint paint=new Paint();
 	
@@ -36,7 +32,7 @@ public class RouteOverlay extends Overlay {
             paint.setColor(Color.BLUE);
             Point point2 = new Point();
             projection.toPixels(currentPoint, point2);
-            paint.setStrokeWidth(2);
+            paint.setStrokeWidth(5);
             canvas.drawLine((float) point.x, (float) point.y, (float) point2.x,(float) point2.y, paint);
         }
         return super.draw(canvas, mapView, shadow, when);

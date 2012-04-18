@@ -1,15 +1,11 @@
 package greg.play.maps;
 
-import java.util.List;
-
 import com.google.android.maps.GeoPoint;
 import com.google.android.maps.MapActivity;
 import com.google.android.maps.MapController;
 import com.google.android.maps.MapView;
-import com.google.android.maps.Overlay;
 
 import android.content.Context;
-import android.graphics.drawable.Drawable;
 import android.location.Location;
 import android.location.LocationListener;
 import android.location.LocationManager;
@@ -20,11 +16,11 @@ public class GoogleMapsAppActivity extends MapActivity {
     
 	private LocationManager myLocationManager;
 	private LocationListener myLocationListener;
-	private TextView myLongitude, myLatitude;
+	private TextView myLongitude, myLatitude, distanceTravelled;
 	private MapView myMapView;
 	private MapController myMapController;
-	private Location currentLocation;
 	private Location previousLocation;
+	private float totalDistanceInMeters;
 	
 	private void CenterLocation(GeoPoint centerGeoPoint)
 	{
@@ -42,6 +38,7 @@ public class GoogleMapsAppActivity extends MapActivity {
         myMapView = (MapView)findViewById(R.id.mapview);
         myLongitude = (TextView)findViewById(R.id.longitude);
         myLatitude = (TextView)findViewById(R.id.latitude);
+        distanceTravelled = (TextView)findViewById(R.id.distanceTravelled);
         myMapView.setSatellite(true); //Set satellite view
         myMapController = myMapView.getController();
         myMapController.setZoom(20); //Fixed Zoom Level
@@ -56,7 +53,7 @@ public class GoogleMapsAppActivity extends MapActivity {
         	    0,
         	    myLocationListener);
         	  
-        //Get the current location in start-up
+/*        //Get the current location in start-up
         GeoPoint initGeoPoint = new GeoPoint(
         		(int)(myLocationManager.getLastKnownLocation(
         	    LocationManager.GPS_PROVIDER)
@@ -64,9 +61,11 @@ public class GoogleMapsAppActivity extends MapActivity {
         	   (int)(myLocationManager.getLastKnownLocation(
         	    LocationManager.GPS_PROVIDER)
         	    .getLongitude()*1000000));
-        
+      
         CenterLocation(initGeoPoint);        
-       
+*/
+        previousLocation = null;
+        totalDistanceInMeters = 0;
         myMapView.setBuiltInZoomControls(true);
     }
     
@@ -77,12 +76,37 @@ public class GoogleMapsAppActivity extends MapActivity {
     }
 	
     private class MyLocationListener implements LocationListener{
-    	public void onLocationChanged(Location argLocation) {
-    		// TODO Auto-generated method stub
-    		GeoPoint myGeoPoint = new GeoPoint(
-    				(int)(argLocation.getLatitude()*1000000),
-    				(int)(argLocation.getLongitude()*1000000));
-    		CenterLocation(myGeoPoint);
+    	
+    	public void onLocationChanged(Location currentLocation) {
+    		float distanceMeters = 0;
+    		if (previousLocation != null)
+    		{
+    			distanceMeters = previousLocation.distanceTo(currentLocation);    		
+    		}
+    		else
+    		{
+    			previousLocation = currentLocation;
+    		}
+    		
+    		if (distanceMeters >= 2)
+    		{
+				// Get geo points to update current location and draw the route tracer
+    			GeoPoint currentGeoPoint = new GeoPoint(
+	    				(int)(currentLocation.getLatitude()*1000000),
+	    				(int)(currentLocation.getLongitude()*1000000));
+	    		GeoPoint previousGeoPoint = new GeoPoint(
+	    				(int)(previousLocation.getLatitude()*1000000),
+	    				(int)(previousLocation.getLongitude()*1000000));
+	    		CenterLocation(currentGeoPoint);
+	    		myMapView.getOverlays().add(new RouteOverlay(previousGeoPoint, currentGeoPoint));
+
+	    		// Update distance text
+	   			totalDistanceInMeters  += distanceMeters;
+	    		distanceTravelled.setText("Meters Travelled: "+ String.valueOf((float)totalDistanceInMeters));
+	    		
+	    		// Store current as previous for next update
+	    		previousLocation = currentLocation;
+    		}
     	}
 
     	public void onProviderDisabled(String provider) {
