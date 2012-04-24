@@ -17,7 +17,12 @@ public final class R {
         public static final int distanceTravelled=0x7f050002;
         public static final int latitude=0x7f050001;
         public static final int longitude=0x7f050000;
-        public static final int mapview=0x7f050003;
+        public static final int mapViewLayout=0x7f050003;
+        public static final int mapview=0x7f050004;
+        public static final int openRoute=0x7f050007;
+        public static final int reset=0x7f050008;
+        public static final int saveRoute=0x7f050006;
+        public static final int toggleTrack=0x7f050005;
     }
     public static final class layout {
         public static final int main=0x7f030000;

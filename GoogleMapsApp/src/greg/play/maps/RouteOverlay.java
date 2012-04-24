@@ -1,8 +1,13 @@
 package greg.play.maps;
 
+import java.util.ArrayList;
+import java.util.List;
+
 import android.graphics.Canvas;
 import android.graphics.Color;
 import android.graphics.Paint;
+import android.graphics.Paint.Style;
+import android.graphics.Path;
 import android.graphics.Point;
 
 import com.google.android.maps.GeoPoint;
@@ -12,12 +17,22 @@ import com.google.android.maps.Projection;
 
 public class RouteOverlay extends Overlay {
 
-	GeoPoint prePoint=null, currentPoint=null;
+	List<GeoPoint> wayPoints;
 	Paint paint=new Paint();
 	
 	public RouteOverlay(GeoPoint prePoint, GeoPoint currentPoint) {
-		this.currentPoint=currentPoint;
-	    this.prePoint = prePoint;
+	    this.wayPoints = new ArrayList<GeoPoint>();
+	    addWayPoint(prePoint);
+	    addWayPoint(currentPoint);
+	}
+	
+	public RouteOverlay() {
+	    this.wayPoints = new ArrayList<GeoPoint>();
+	}
+
+	public void addWayPoint(GeoPoint newPoint)
+	{
+		wayPoints.add(newPoint);
 	}
 
 	@Override
@@ -25,15 +40,26 @@ public class RouteOverlay extends Overlay {
         Projection projection = mapView.getProjection();
         if (shadow == false) {
 
-            Paint paint = new Paint();
-            paint.setAntiAlias(true);
-            Point point = new Point();
-            projection.toPixels(prePoint, point);
-            paint.setColor(Color.BLUE);
-            Point point2 = new Point();
-            projection.toPixels(currentPoint, point2);
-            paint.setStrokeWidth(5);
-            canvas.drawLine((float) point.x, (float) point.y, (float) point2.x,(float) point2.y, paint);
+        	if (wayPoints.size() >= 2)
+        	{        		
+	            Paint paint = new Paint();
+	            paint.setAntiAlias(true);
+	            paint.setStyle(Style.STROKE);
+	            paint.setColor(Color.BLUE);
+	            paint.setStrokeWidth(5);
+	            
+	            Path path = new Path();
+	            Point wayPoint = new Point();
+	            projection.toPixels(wayPoints.get(0), wayPoint);
+	            path.moveTo(wayPoint.x, wayPoint.y);
+	            for(int i = 1; i < wayPoints.size(); i++)
+	            {
+	            	projection.toPixels(wayPoints.get(i), wayPoint);
+	            	path.lineTo(wayPoint.x, wayPoint.y);
+	            }
+	            
+	            canvas.drawPath(path, paint);
+        	}
         }
         return super.draw(canvas, mapView, shadow, when);
     }
@@ -41,7 +67,6 @@ public class RouteOverlay extends Overlay {
     @Override
     public void draw(Canvas canvas, MapView mapView, boolean shadow) {
         // TODO Auto-generated method stub
-
         super.draw(canvas, mapView, shadow);
     }
 }
