@@ -4,12 +4,15 @@ import java.io.FileInputStream;
 import java.io.FileNotFoundException;
 import java.io.FileOutputStream;
 import java.io.IOException;
+import java.util.ArrayList;
+import java.util.List;
 
 import com.google.android.maps.GeoPoint;
 import com.google.android.maps.MapActivity;
 import com.google.android.maps.MapController;
 import com.google.android.maps.MapView;
 import android.content.Context;
+import android.content.Intent;
 import android.location.Location;
 import android.location.LocationListener;
 import android.location.LocationManager;
@@ -21,6 +24,7 @@ import android.widget.TextView;
 public class GoogleMapsAppActivity extends MapActivity{
     
 	private static final String FILENAME = "greg_play_map_lastroute";
+	private static int routeCounter = 0;
 	private LocationManager locationManager;
 	private LocationListener locationListener;
 	private TextView textLongitude, textLatitude, textDistanceTravelled;
@@ -29,6 +33,7 @@ public class GoogleMapsAppActivity extends MapActivity{
 	private Location previousLocation;
 	private float totalDistanceInMeters;
 	private Boolean isTracking;
+	private RouteStorage routeStore;
 	
 	/** Called when the activity is first created. */
     @Override
@@ -53,7 +58,9 @@ public class GoogleMapsAppActivity extends MapActivity{
         	    0,
         	    0,
         	    locationListener);
-        	  
+        
+        routeStore = new RouteStorage(getBaseContext());
+        
         previousLocation = null;
         totalDistanceInMeters = 0;
         mapView.setBuiltInZoomControls(true);
@@ -83,8 +90,100 @@ public class GoogleMapsAppActivity extends MapActivity{
 		}
 	}
 	
+	@Override
+    protected void onActivityResult(int requestCode, int resultCode, Intent data) {
+		super.onActivityResult(requestCode, resultCode, data);
+        if (resultCode == 1)
+        {
+        	String routeId = data.getStringExtra("routeId");
+        	String contentsString = routeStore.getRouteData(routeId);
+        	
+			// Open from DB
+			//
+			if (contentsString.length() > 0)
+			{
+	    		RouteOverlay routeOverlay = null;
+	    		if ((mapView.getOverlays().size()) == 0)
+	    		{
+	    			routeOverlay = new RouteOverlay();
+	    			mapView.getOverlays().add(routeOverlay);
+	    		}
+	    		else
+	    		{
+	    			routeOverlay = (RouteOverlay)mapView.getOverlays().get(0);
+	    		}
+				
+				String[] geoPoints = contentsString.toString().split(",");
+				for (String geoPoint : geoPoints)
+				{
+					if (geoPoint != null)
+					{
+						GeoPoint gP = null;
+						String []latLong = geoPoint.split(":");
+						if (latLong.length == 2)
+						{					
+							gP = new GeoPoint(Integer.parseInt(latLong[0]), Integer.parseInt(latLong[1]));
+			    			routeOverlay.addWayPoint(gP);
+			    			CenterLocation(gP);
+						}
+					}
+				}
+				
+				mapView.invalidate();
+				if (isTracking)
+				{
+					toggleTrack((Button)findViewById(R.id.toggleTrack));
+				}
+			}
+        }
+	}
+	
 	public void openRoute(View view)
 	{
+		ArrayList<String> routeIds = routeStore.getRouteIds();
+		
+		Intent i = new Intent(getApplicationContext(), RouteListView.class);
+		i.putStringArrayListExtra("routeIds", routeIds);
+		
+		startActivityForResult(i, 1);
+		
+		// Open from file
+		//
+		//FileInputStream fis = null;
+		//String contentsString = openRouteFromFile();
+	}
+	
+	public void saveRoute(View view)
+	{
+		if (mapView.getOverlays().size() > 0)
+		{
+			RouteOverlay routeOverlay = (RouteOverlay)mapView.getOverlays().get(0);
+			
+			String contentsString = "";
+			
+			for (GeoPoint gP : routeOverlay.wayPoints)
+			{
+				contentsString += gP.getLatitudeE6() + ":" + gP.getLongitudeE6() + ",";		
+			}
+			
+			// Save to DB
+			//
+			routeStore.addRouteData("Route " + routeCounter++, contentsString);
+						
+			// Save to file
+			//
+			//saveRouteToFile(contentsString);
+		}	
+	}
+	
+    @Override
+    protected void onStop() {
+    	locationManager.removeUpdates(locationListener);
+        super.onStop();
+    }
+	
+    private String openRouteFromFile()
+    {
 		FileInputStream fis = null;
 		StringBuffer contentsString = null;
 		try 
@@ -125,98 +224,46 @@ public class GoogleMapsAppActivity extends MapActivity{
 			e.printStackTrace();
 		}
 		
-		if (contentsString.length() > 0)
-		{
-    		RouteOverlay routeOverlay = null;
-    		if ((mapView.getOverlays().size()) == 0)
-    		{
-    			routeOverlay = new RouteOverlay();
-    			mapView.getOverlays().add(routeOverlay);
-    		}
-    		else
-    		{
-    			routeOverlay = (RouteOverlay)mapView.getOverlays().get(0);
-    		}
-			
-			String[] geoPoints = contentsString.toString().split(",");
-			for (String geoPoint : geoPoints)
-			{
-				if (geoPoint != null)
-				{
-					GeoPoint gP = null;
-					String []latLong = geoPoint.split(":");
-					if (latLong.length == 2)
-					{					
-						gP = new GeoPoint(Integer.parseInt(latLong[0]), Integer.parseInt(latLong[1]));
-		    			routeOverlay.addWayPoint(gP);
-		    			CenterLocation(gP);
-					}
-				}
-			}
-			
-			mapView.invalidate();
-			if (isTracking)
-			{
-				toggleTrack((Button)findViewById(R.id.toggleTrack));
-			}
-		}
-	}
-	
-	public void saveRoute(View view)
-	{
-		if (mapView.getOverlays().size() > 0)
-		{
-			RouteOverlay routeOverlay = (RouteOverlay)mapView.getOverlays().get(0);
-			
-			String contentsString = "";
-			
-			for (GeoPoint gP : routeOverlay.wayPoints)
-			{
-				contentsString += gP.getLatitudeE6() + ":" + gP.getLongitudeE6() + ",";		
-			}
-			
-			FileOutputStream fos = null;
-			try 
-			{
-				fos = openFileOutput(FILENAME, Context.MODE_PRIVATE);
-			} 
-			catch (FileNotFoundException e1) 
-			{
-				e1.printStackTrace();
-			}
-			
-			try
-			{
-				if (fos != null)
-				{
-					fos.write(contentsString.getBytes());
-				}
-			} 
-			catch (IOException e)
-			{
-				e.printStackTrace();
-			}
-			
-			try
-			{
-				if (fos != null)
-				{
-					fos.close();	
-				}
-			} 
-			catch (IOException e)
-			{
-				e.printStackTrace();
-			}
-		}	
-	}
-	
-    @Override
-    protected void onStop() {
-    	locationManager.removeUpdates(locationListener);
-        super.onStop();
+		return contentsString.toString();
     }
-	
+    
+    private void saveRouteToFile(String contentsString)
+    {
+    	FileOutputStream fos = null;
+		try 
+		{
+			fos = openFileOutput(FILENAME, Context.MODE_PRIVATE);
+		} 
+		catch (FileNotFoundException e1) 
+		{
+			e1.printStackTrace();
+		}
+		
+		try
+		{
+			if (fos != null)
+			{
+				fos.write(contentsString.getBytes());
+			}
+		} 
+		catch (IOException e)
+		{
+			e.printStackTrace();
+		}
+		
+		try
+		{
+			if (fos != null)
+			{
+				fos.close();	
+			}
+		} 
+		catch (IOException e)
+		{
+			e.printStackTrace();
+		}
+    }
+    
 	private void CenterLocation(GeoPoint centerGeoPoint)
 	{
 		mapController.animateTo(centerGeoPoint);
